@@ -66,6 +66,7 @@ def get_numbers_from_image(image: Image.Image, api_key: str):
     """使用 Gemini Vision API 從圖片中辨識數字，並加入兩段式驗證。"""
     print("正在將圖片傳送至 Gemini API 進行兩段式驗證...")
     
+    """使用 Gemini Vision API 可以自行更換版本如:gemini-2.5-flash-lite換成gemini-2.5-pro 。"""
     base64_image = encode_image_to_base64(image)
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
