@@ -1,3 +1,4 @@
+下載請按綠色的CODE按紐 會出現Download ZIP按了就會下載全部東西了
 GEMINI有很多版本可以自己替換 
 API申請網址  https://aistudio.google.com/api-keys  
 會出現一組AI開頭的字母 貼在ENV
