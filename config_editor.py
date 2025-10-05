@@ -82,7 +82,7 @@ class ConfigApp(tk.Tk):
         type_frame = ttk.Frame(click_frame); type_frame.pack(fill="x", pady=(5,0))
         ttk.Label(type_frame, text="動作類型:").pack(side="left", padx=5)
         ttk.Combobox(type_frame, textvariable=self.click_type_var, values=CLICK_OPTIONS_DISPLAY, state='readonly', width=25).pack(side="left", padx=5)
-        ttk.LabelFrame(settings_frame, text="5. 正常循環間隔 (秒)", padding="10").pack(fill="x", pady=5)
+        ttk.LabelFrame(settings_frame, text="5. 正常循環間隔 (秒)建議100秒", padding="10").pack(fill="x", pady=5)
         ttk.Entry(settings_frame.winfo_children()[-1], textvariable=self.loop_interval_var, width=10).pack(side="left", padx=5)
         control_frame = ttk.Frame(main_frame); control_frame.pack(fill="x", pady=20)
         control_frame.columnconfigure(0, weight=1); control_frame.columnconfigure(1, weight=1)
@@ -163,4 +163,5 @@ class ConfigApp(tk.Tk):
 
 if __name__ == "__main__":
     app = ConfigApp()
+
     app.mainloop()
