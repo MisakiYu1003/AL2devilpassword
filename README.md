@@ -14,16 +14,17 @@ gemini-2.0-flash-lite   沒看
 使用方法          
 去安裝pythone 3 WIN11.10 下載連結 https://www.python.org/ftp/python/3.13.6/python-3.13.6-amd64.exe 其它版本 https://www.python.org/downloads/  
 開啟CMD 輸入以下句子  
+py -m pip install pyautogui  
+py -m pip install requests  
+py -m pip install Pillow  
+py -m pip install python-dotenv  
+py -m pip install pyperclip  
+py -m pip install screeninfo  
+  
+有用過pyton的用這個  
 pip install pyautogui  
 pip install requests  
 pip install Pillow  
 pip install python-dotenv  
 pip install pyperclip  
 pip install screeninfo  
-如果出現'pip' 不是內部或外部命令、可執行的程式或批次檔。 前面請改用多加py -m  
-py -m pip install pyautogui  
-py -m pip install requests    
-py -m pip install Pillow    
-py -m pip install python-dotenv  
-py -m pip install pyperclip     
-py -m pip install screeninfo    
