@@ -22,8 +22,8 @@ pip install pyperclip
 pip install screeninfo  
 如果出現'pip' 不是內部或外部命令、可執行的程式或批次檔。 前面請改用多加py -m  
 py -m pip install pyautogui  
-py -m pip install requests  
-py -m pip install Pillow  
-py -m pip install python-dotenv 
-py -m pip install pyperclip 
-py -m pip install screeninfo  
+py -m pip install requests    
+py -m pip install Pillow    
+py -m pip install python-dotenv  
+py -m pip install pyperclip     
+py -m pip install screeninfo    
