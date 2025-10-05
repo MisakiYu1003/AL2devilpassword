@@ -16,3 +16,4 @@ pip install requests
 pip install Pillow  
 pip install python-dotenv  
 pip install pyperclip  
+pip install screeninfo
