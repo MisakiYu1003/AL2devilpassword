@@ -1,27 +1,43 @@
-# 檔案名稱: config_editor.py (版本 5.2 - 簡化左鍵選項)
+# 檔案名稱: config_editor.py (版本 5.5 - 新增快速循環設定)
 import tkinter as tk
 from tkinter import ttk, messagebox
 import re
 import os
 import subprocess
 import sys
+
 try:
     import screeninfo
 except ImportError:
     messagebox.showerror("缺少函式庫", "找不到 'screeninfo' 函式庫。\n請先執行 'pip install screeninfo' 來安裝。")
     sys.exit()
 
+try:
+    import keyboard
+except ImportError:
+    messagebox.showerror("缺少函式庫", "找不到 'keyboard' 函式庫。\n請先執行 'pip install keyboard' 來安裝。\n\n注意：在某些系統上可能需要系統管理員權限 (以系統管理員身分執行 cmd)。")
+    sys.exit()
+
+
 if sys.platform == 'win32':
     import ctypes
-    try: ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except Exception:
-        try: ctypes.windll.user32.SetProcessDPIAware()
-        except Exception as e: print(f"警告：設定 DPI 感知失敗: {e}")
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception as e:
+            print(f"警告：設定 DPI 感知失敗: {e}")
 
 # --- 常數設定 ---
-ENV_FILE = ".env"; SCRIPT_FILE = "devil_code_solver.py"
-DIALOG_VAR_NAME = "DIALOG_BOX_REGION"; CLICK_VAR_NAME = "CLICK_COORDINATE"
-LOOP_VAR_NAME = "LOOP_INTERVAL"; CLICK_TYPE_VAR_NAME = "CLICK_TYPE"
+ENV_FILE = ".env"
+SCRIPT_FILE = "devil_code_solver.py"
+DIALOG_VAR_NAME = "DIALOG_BOX_REGION"
+CLICK_VAR_NAME = "CLICK_COORDINATE"
+LOOP_VAR_NAME = "LOOP_INTERVAL"
+SHORT_INTERVAL_VAR_NAME = "SHORT_INTERVAL" # 新增常數
+CLICK_TYPE_VAR_NAME = "CLICK_TYPE"
+MACRO_KEY_VAR_NAME = "MACRO_TOGGLE_KEYS"
 MODEL_OPTIONS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]
 CLICK_OPTIONS_MAP = {
     '左鍵單擊 (Click)': 'click',
@@ -31,6 +47,20 @@ CLICK_OPTIONS_MAP = {
 }
 CLICK_OPTIONS_DISPLAY = list(CLICK_OPTIONS_MAP.keys())
 CLICK_VALUES_MAP = {v: k for k, v in CLICK_OPTIONS_MAP.items()}
+
+# Tkinter 的 keysym 對應 pyautogui 的名稱
+KEYSYM_MAP = {
+    'control_l': 'ctrl', 'control_r': 'ctrl',
+    'alt_l': 'alt', 'alt_r': 'alt',
+    'shift_l': 'shift', 'shift_r': 'shift',
+    'win_l': 'win', 'win_r': 'win',
+    'return': 'enter',
+    'backspace': 'backspace',
+    'delete': 'delete',
+    'escape': 'esc',
+    'prior': 'pageup',
+    'next': 'pagedown'
+}
 
 class ScreenSelector:
     def __init__(self, parent, mode):
@@ -55,18 +85,23 @@ class ScreenSelector:
 class ConfigApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("惡魔密碼辨識器 - 設定工具 v5.2 (簡化點擊)")
-        self.geometry("580x600")
+        self.title("惡魔密碼辨識器 - 設定工具")
+        self.geometry("580x680")
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.api_key_var, self.dialog_region_var = tk.StringVar(), tk.StringVar()
         self.click_coord_var, self.loop_interval_var = tk.StringVar(), tk.StringVar()
+        self.short_interval_var = tk.StringVar() # 新增變數
         self.model_name_var, self.click_type_var = tk.StringVar(), tk.StringVar()
+        self.macro_key_var = tk.StringVar(value="尚未設定")
+        self.is_recording = False
         self.running_process = None
-        self.create_widgets(); self.load_initial_values()
+        self.create_widgets()
+        self.load_initial_values()
 
     def create_widgets(self):
         main_frame = ttk.Frame(self, padding="15"); main_frame.pack(fill="both", expand=True)
         settings_frame = ttk.Frame(main_frame); settings_frame.pack(fill="x", expand=True)
+
         ttk.LabelFrame(settings_frame, text="1. Gemini API 金鑰設定", padding="10").pack(fill="x", pady=5)
         ttk.Entry(settings_frame.winfo_children()[-1], textvariable=self.api_key_var).pack(side="left", fill="x", expand=True, padx=5)
         ttk.LabelFrame(settings_frame, text="2. AI 模型設定", padding="10").pack(fill="x", pady=5)
@@ -82,8 +117,26 @@ class ConfigApp(tk.Tk):
         type_frame = ttk.Frame(click_frame); type_frame.pack(fill="x", pady=(5,0))
         ttk.Label(type_frame, text="動作類型:").pack(side="left", padx=5)
         ttk.Combobox(type_frame, textvariable=self.click_type_var, values=CLICK_OPTIONS_DISPLAY, state='readonly', width=25).pack(side="left", padx=5)
-        ttk.LabelFrame(settings_frame, text="5. 正常循環間隔 (秒)建議100秒", padding="10").pack(fill="x", pady=5)
-        ttk.Entry(settings_frame.winfo_children()[-1], textvariable=self.loop_interval_var, width=10).pack(side="left", padx=5)
+
+        # --- *** 修改後的第 5 項設定 *** ---
+        interval_lf = ttk.LabelFrame(settings_frame, text="5. 循環間隔設定 (秒)", padding="10")
+        interval_lf.pack(fill="x", pady=5)
+        ttk.Label(interval_lf, text="正常循環 (建議>100):").pack(side="left", padx=(5,0))
+        ttk.Entry(interval_lf, textvariable=self.loop_interval_var, width=8).pack(side="left", padx=(5, 15))
+        ttk.Label(interval_lf, text="快速循環 (偵測到後):").pack(side="left", padx=(5,0))
+        ttk.Entry(interval_lf, textvariable=self.short_interval_var, width=8).pack(side="left", padx=5)
+
+        # --- 第 6 項設定不變 ---
+        macro_lf = ttk.LabelFrame(settings_frame, text="6. 按鍵精靈暫停/繼續快捷鍵 (可選)", padding="10")
+        macro_lf.pack(fill="x", pady=5)
+        macro_display_frame = ttk.Frame(macro_lf)
+        macro_display_frame.pack(fill="x", padx=5, pady=5)
+        ttk.Label(macro_display_frame, text="目前設定:").pack(side="left")
+        ttk.Label(macro_display_frame, textvariable=self.macro_key_var, font=("Courier", 10, "bold"), relief="sunken", padding=(5, 2), width=20).pack(side="left", padx=10)
+        self.record_button = ttk.Button(macro_display_frame, text="設定快捷鍵", command=self.start_recording)
+        self.record_button.pack(side="left", padx=5)
+        ttk.Button(macro_display_frame, text="清除", command=self.clear_hotkey).pack(side="left")
+
         control_frame = ttk.Frame(main_frame); control_frame.pack(fill="x", pady=20)
         control_frame.columnconfigure(0, weight=1); control_frame.columnconfigure(1, weight=1)
         style = ttk.Style(self); style.configure("Accent.TButton", font=("Arial", 12, "bold"))
@@ -94,11 +147,65 @@ class ConfigApp(tk.Tk):
         self.status_var = tk.StringVar(value="請依序完成設定，點擊下方按鈕執行。")
         ttk.Label(self, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W).pack(side=tk.BOTTOM, fill=tk.X)
 
+    def start_recording(self):
+        if self.is_recording: return
+        self.is_recording = True
+        self.status_var.set("錄製模式：請直接在鍵盤上按下您要設定的快捷鍵... (按 ESC 取消)")
+        self.record_button.config(text="錄製中...", state="disabled")
+        self.grab_set()
+        self.bind("<KeyPress>", self.on_key_press_record)
+        self.bind("<Escape>", self.cancel_recording)
+
+    def stop_recording(self):
+        self.is_recording = False
+        self.status_var.set("錄製完成。")
+        self.record_button.config(text="設定快捷鍵", state="normal")
+        self.unbind("<KeyPress>")
+        self.unbind("<Escape>")
+        self.grab_release()
+
+    def cancel_recording(self, event=None):
+        if not self.is_recording: return
+        self.status_var.set("錄製已取消。")
+        self.stop_recording()
+        return "break"
+
+    def on_key_press_record(self, event):
+        if event.keysym in ('Control_L', 'Control_R', 'Alt_L', 'Alt_R', 'Shift_L', 'Shift_R', 'Win_L', 'Win_R', 'Meta_L', 'Meta_R'):
+            return
+
+        parts = []
+        if keyboard.is_pressed('ctrl') or keyboard.is_pressed('left ctrl') or keyboard.is_pressed('right ctrl'):
+            parts.append('ctrl')
+        if keyboard.is_pressed('alt') or keyboard.is_pressed('left alt') or keyboard.is_pressed('right alt'):
+            if not ('ctrl' in parts and keyboard.is_pressed('right alt')):
+                 parts.append('alt')
+        if keyboard.is_pressed('shift') or keyboard.is_pressed('left shift') or keyboard.is_pressed('right shift'):
+            parts.append('shift')
+        if keyboard.is_pressed('win') or keyboard.is_pressed('left windows') or keyboard.is_pressed('right windows'):
+            parts.append('win')
+
+        key_name = event.keysym.lower()
+        if key_name in KEYSYM_MAP:
+            key_name = KEYSYM_MAP[key_name]
+        
+        if key_name not in parts:
+            parts.append(key_name)
+        
+        hotkey_string = ",".join(parts)
+        self.macro_key_var.set(hotkey_string)
+        self.stop_recording()
+        return "break"
+
+    def clear_hotkey(self):
+        self.macro_key_var.set("尚未設定")
+        self.status_var.set("快捷鍵設定已清除。")
+
     def load_initial_values(self):
         try:
             if os.path.exists(ENV_FILE):
                 with open(ENV_FILE, 'r') as f:
-                    match = re.search(r"GEMINI_API_KEY=(.*)", f.read()); 
+                    match = re.search(r"GEMINI_API_KEY=(.*)", f.read())
                     if match: self.api_key_var.set(match.group(1).strip())
         except Exception: pass
         if not os.path.exists(SCRIPT_FILE): messagebox.showerror("錯誤", f"找不到主程式檔案: {SCRIPT_FILE}"); self.destroy(); return
@@ -107,29 +214,53 @@ class ConfigApp(tk.Tk):
             model_match = re.search(r"/models/(.*?):generateContent", content); self.model_name_var.set(model_match.group(1) if model_match and model_match.group(1) in MODEL_OPTIONS else MODEL_OPTIONS[0])
             dialog_match = re.search(fr"{DIALOG_VAR_NAME}\s*=\s*(\(.*\))", content); self.dialog_region_var.set(dialog_match.group(1) if dialog_match else "(尚未設定)")
             click_match = re.search(fr"{CLICK_VAR_NAME}\s*=\s*(\(.*\))", content); self.click_coord_var.set(click_match.group(1) if click_match else "(尚未設定)")
-            loop_match = re.search(fr"{LOOP_VAR_NAME}\s*=\s*(\d+)", content); self.loop_interval_var.set(loop_match.group(1) if loop_match else "100")
+            
+            # --- *** 更新讀取邏輯 *** ---
+            loop_match = re.search(fr"{LOOP_VAR_NAME}\s*=\s*(\d+\.?\d*)", content); self.loop_interval_var.set(loop_match.group(1) if loop_match else "100")
+            short_interval_match = re.search(fr"{SHORT_INTERVAL_VAR_NAME}\s*=\s*(\d+\.?\d*)", content); self.short_interval_var.set(short_interval_match.group(1) if short_interval_match else "10")
+
             click_type_match = re.search(fr"{CLICK_TYPE_VAR_NAME}\s*=\s*['\"](.*?)['\"]", content)
             if click_type_match and click_type_match.group(1) in CLICK_VALUES_MAP: self.click_type_var.set(CLICK_VALUES_MAP[click_type_match.group(1)])
             else: self.click_type_var.set(CLICK_OPTIONS_DISPLAY[0])
+            
+            macro_key_match = re.search(fr"{MACRO_KEY_VAR_NAME}\s*=\s*['\"](.*?)['\"]", content)
+            self.macro_key_var.set(macro_key_match.group(1) if (macro_key_match and macro_key_match.group(1)) else "尚未設定")
         except Exception as e: messagebox.showerror("讀取錯誤", f"讀取 {SCRIPT_FILE} 失敗: {e}")
 
     def save_settings(self):
+        # --- *** 更新驗證邏輯 *** ---
+        try:
+            float(self.loop_interval_var.get().strip())
+            float(self.short_interval_var.get().strip())
+        except ValueError:
+            messagebox.showerror("錯誤", "正常循環和快速循環的秒數都必須是純數字！"); return False
+        
         if not all([self.api_key_var.get().strip(), self.model_name_var.get().strip(), self.click_type_var.get()]):
             messagebox.showerror("錯誤", "API 金鑰, AI 模型和點擊方式為必填項！"); return False
-        if not self.loop_interval_var.get().strip().isdigit():
-            messagebox.showerror("錯誤", "循環間隔秒數必須是純數字！"); return False
+
         try:
             with open(ENV_FILE, 'w') as f: f.write(f"GEMINI_API_KEY={self.api_key_var.get().strip()}")
             with open(SCRIPT_FILE, 'r', encoding='utf-8') as f: content = f.read()
             new_model = self.model_name_var.get().strip()
             pattern = re.compile(r'(url\s*=\s*f".*?/models/)(.*?)(:generateContent.*")', re.MULTILINE)
             content = pattern.sub(fr'\g<1>{new_model}\g<3>', content)
-            click_type_value = CLICK_OPTIONS_MAP[self.click_type_var.get()]
-            pattern = re.compile(fr"^{CLICK_TYPE_VAR_NAME}\s*=\s*.*", re.MULTILINE)
-            content = pattern.sub(f"{CLICK_TYPE_VAR_NAME} = '{click_type_value}'", content)
-            for var, val_str in [(DIALOG_VAR_NAME, self.dialog_region_var.get()), (CLICK_VAR_NAME, self.click_coord_var.get()), (LOOP_VAR_NAME, self.loop_interval_var.get())]:
+            
+            # --- *** 更新儲存邏輯 *** ---
+            for var, val_str in [(DIALOG_VAR_NAME, self.dialog_region_var.get()),
+                                 (CLICK_VAR_NAME, self.click_coord_var.get()),
+                                 (LOOP_VAR_NAME, self.loop_interval_var.get()),
+                                 (SHORT_INTERVAL_VAR_NAME, self.short_interval_var.get())]:
                 pattern = re.compile(fr"^{var}\s*=\s*.*", re.MULTILINE)
                 content = pattern.sub(f"{var} = {val_str}", content)
+            
+            click_type_value = CLICK_OPTIONS_MAP[self.click_type_var.get()]
+            macro_key_value = self.macro_key_var.get()
+            if macro_key_value == "尚未設定": macro_key_value = ""
+
+            for var, val_str in [(CLICK_TYPE_VAR_NAME, click_type_value), (MACRO_KEY_VAR_NAME, macro_key_value)]:
+                pattern = re.compile(fr"^{var}\s*=\s*.*", re.MULTILINE)
+                content = pattern.sub(f"{var} = '{val_str}'", content)
+
             with open(SCRIPT_FILE, 'w', encoding='utf-8') as f: f.write(content)
             return True
         except Exception as e: messagebox.showerror("儲存失敗", f"寫入檔案時發生錯誤: {e}"); return False
@@ -163,5 +294,4 @@ class ConfigApp(tk.Tk):
 
 if __name__ == "__main__":
     app = ConfigApp()
-
     app.mainloop()
