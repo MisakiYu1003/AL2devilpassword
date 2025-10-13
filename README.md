@@ -1,7 +1,7 @@
 下載請按綠色的CODE按紐 會出現Download ZIP按了就會下載全部東西了  
 先安裝pythone 3  安裝pythone 3套件  
 打開config_editor  
-GEMINI有很多版本可以自己替換   
+GEMINI有很多版本可以自己替換    可以多開幾個GOOGLE帳號多申請幾個API
 API申請網址  https://aistudio.google.com/api-keys  
 會出現一組AI開頭的字母 貼在ENV  
 gemini-2.5-pro          每天辨識次數100次較慢    
