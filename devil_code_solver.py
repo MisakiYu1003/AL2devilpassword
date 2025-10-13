@@ -1,4 +1,4 @@
-# 檔案名稱: devil_code_solver.py
+# 檔案名稱: devil_code_solver.py (版本 5.3 - 支援外部腳本暫停/繼續)
 import pyautogui
 import time
 import requests
@@ -18,20 +18,26 @@ load_dotenv()
 
 # 1. 惡魔密碼數字框在螢幕上的座標 (x, y, 向右寬度, 往下高度)
 # *** 極度重要 ***: 請精準地只框選數字區域。
-DIALOG_BOX_REGION = (1859, 959, 277, 91)
+DIALOG_BOX_REGION = (2081, 989, 238, 134)
 
 # 2. 設定輸入前要點擊的座標 (x, y)
-CLICK_COORDINATE = (2494, 1230)
-CLICK_TYPE = 'click'
+CLICK_COORDINATE = (2268, 1099)
+CLICK_TYPE = 'hold_click'
 
-# 3. 設定滑鼠連點兩次之間的間隔時間 (秒)
-DOUBLE_CLICK_INTERVAL = 0.25
+# 3. 按鍵精靈/腳本的 "暫停/繼續" 快捷鍵 (可選)
+#    - 單一按鍵請填寫如: 'f1', 'f12'
+#    - 組合鍵請用逗號分隔: 'alt,q', 'ctrl,r'
+#    - 若不需要此功能，請留空: ''
+MACRO_TOGGLE_KEYS = 'alt,6'
 
-# 4. 正常循環的間隔時間 (秒) 建議100
-LOOP_INTERVAL = 5
+# 4. 設定滑鼠連點兩次之間的間隔時間 (秒)
+DOUBLE_CLICK_INTERVAL = 0.001
 
-# 5. 偵測到數字後，快速循環的間隔時間 (秒)
-SHORT_INTERVAL = 10
+# 5. 正常循環的間隔時間 (秒) 建議100
+LOOP_INTERVAL = 100
+
+# 6. 偵測到數字後，快速循環的間隔時間 (秒)
+SHORT_INTERVAL = 5
 
 # --- 以下為程式碼主體，通常不需要修改 ---
 
@@ -43,11 +49,26 @@ def get_gemini_api_key():
         exit()
     return api_key
 
+def press_macro_keys():
+    """解析並按下設定的快捷鍵"""
+    if not MACRO_TOGGLE_KEYS:
+        return
+    try:
+        keys = [key.strip() for key in MACRO_TOGGLE_KEYS.split(',')]
+        if len(keys) > 1:
+            print(f"正在執行組合鍵: {keys}")
+            pyautogui.hotkey(*keys)
+        elif len(keys) == 1 and keys[0]:
+            print(f"正在執行單一按鍵: {keys[0]}")
+            pyautogui.press(keys[0])
+    except Exception as e:
+        print(f"執行快捷鍵 '{MACRO_TOGGLE_KEYS}' 時發生錯誤: {e}")
+
 def capture_screen_region(region):
     """擷取螢幕指定區域的畫面。"""
     try:
         screenshot = pyautogui.screenshot(region=region)
-        screenshot.save("debug_screenshot.png") 
+        screenshot.save("debug_screenshot.png")
         return screenshot
     except Exception as e:
         print(f"擷取螢幕時發生錯誤：{e}")
@@ -62,11 +83,11 @@ def encode_image_to_base64(image: Image.Image):
 def get_numbers_from_image(image: Image.Image, api_key: str):
     """使用 Gemini Vision API 從圖片中辨識數字，並加入兩段式驗證。"""
     print("正在將圖片傳送至 Gemini API 進行兩段式驗證...")
-    
+
     base64_image = encode_image_to_base64(image)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
-    
+
     prompt_text = (
         "Your task is to analyze an image from a game's anti-bot system. "
         "First, determine if the image contains any distorted, cursive, handwritten-style digits. "
@@ -76,7 +97,7 @@ def get_numbers_from_image(image: Image.Image, api_key: str):
         "Example 1: Image contains '85989' -> Respond: {\"contains_digits\": true, \"extracted_number\": \"85989\"} "
         "Example 2: Image is a game scene with no captcha -> Respond: {\"contains_digits\": false, \"extracted_number\": null}"
     )
-    
+
     payload = {
         "contents": [{
             "parts": [
@@ -102,11 +123,11 @@ def get_numbers_from_image(image: Image.Image, api_key: str):
             if 'candidates' in result and result['candidates']:
                 text_content = result['candidates'][0]['content']['parts'][0]['text']
                 print(f"Gemini API 回傳原始 JSON: '{text_content}'")
-                
+
                 try:
                     cleaned_text = text_content.strip().replace('```json', '').replace('```', '')
                     response_json = json.loads(cleaned_text)
-                    
+
                     if response_json.get("contains_digits") is True:
                         extracted_number = response_json.get("extracted_number")
                         if extracted_number and isinstance(extracted_number, str) and extracted_number.isdigit():
@@ -118,7 +139,7 @@ def get_numbers_from_image(image: Image.Image, api_key: str):
                     else:
                         print("AI 確認圖片中沒有惡魔密碼數字。")
                         return None
-                        
+
                 except (json.JSONDecodeError, TypeError, KeyError) as e:
                     print(f"警告：無法將 AI 回應解析為預期的 JSON 格式。錯誤: {e}")
                     return None
@@ -144,63 +165,67 @@ def main():
     print("惡魔密碼自動辨識程式已啟動。")
     print("按下 Ctrl+C 可以中止程式。")
     api_key = get_gemini_api_key()
+    is_first_detection = True # 用於標記是否為本輪第一次偵測到
     try:
         while True:
-            print(f"\n--- 正常循環，將在 {LOOP_INTERVAL} 秒後掃描 ---")
-            time.sleep(LOOP_INTERVAL)
-            
+            # --- 正常循環偵測 ---
+            if is_first_detection:
+                print(f"\n--- 正常循環，將在 {LOOP_INTERVAL} 秒後掃描 ---")
+                time.sleep(LOOP_INTERVAL)
+            else:
+                print(f"\n--- 快速循環，將在 {SHORT_INTERVAL} 秒後再次偵測 ---")
+                time.sleep(SHORT_INTERVAL)
+
             image_to_process = capture_screen_region(DIALOG_BOX_REGION)
             if image_to_process is None:
                 continue
 
             numbers_to_type = get_numbers_from_image(image_to_process, api_key)
-            
-            while numbers_to_type:
-                print(f"偵測到數字: {numbers_to_type}！進入快速偵測模式...")
-                
+
+            if numbers_to_type:
+                # --- 首次偵測到數字，執行 "暫停" 快捷鍵 ---
+                if is_first_detection:
+                    print("首次偵測到數字，準備執行前置快捷鍵...")
+                    press_macro_keys()
+                    is_first_detection = False
+                    time.sleep(0.5) # 短暫延遲確保腳本已暫停
+
+                print(f"偵測到數字: {numbers_to_type}！準備進行自動化輸入...")
+
                 try:
                     # --- 滑鼠動作區塊 ---
                     print(f"移動滑鼠至 {CLICK_COORDINATE} 並執行 '{CLICK_TYPE}' 動作...")
-                    original_pos = pyautogui.position() # 儲存滑鼠原始位置
-                    pyautogui.moveTo(CLICK_COORDINATE[0], CLICK_COORDINATE[1], duration=0.25)
-                    
-                    # 根據 CLICK_TYPE 執行不同的滑鼠操作
-                    if CLICK_TYPE == 'click':
-                        pyautogui.click()
-                    elif CLICK_TYPE == 'double':
-                        pyautogui.doubleClick(interval=DOUBLE_CLICK_INTERVAL)
+                    original_pos = pyautogui.position()
+                    pyautogui.moveTo(CLICK_COORDINATE[0], CLICK_COORDINATE[1])
+
+                    if CLICK_TYPE == 'click': pyautogui.click()
+                    elif CLICK_TYPE == 'double': pyautogui.doubleClick(interval=DOUBLE_CLICK_INTERVAL)
                     elif CLICK_TYPE == 'hold_click':
-                        pyautogui.mouseDown()
-                        time.sleep(0.25)
-                        pyautogui.mouseUp()
-                    # 如果 CLICK_TYPE 是 'none'，則不執行任何點擊動作
+                        pyautogui.mouseDown(); time.sleep(0.001); pyautogui.mouseUp()
                     
-                    pyautogui.moveTo(original_pos[0], original_pos[1], duration=0.25) # 將滑鼠移回原位
+                    pyautogui.moveTo(original_pos[0], original_pos[1])
                     print("滑鼠已歸位。")
-                    
+
                     # --- 鍵盤輸入區塊 ---
                     print(f"準備使用剪貼簿貼上數字: {numbers_to_type}")
                     pyperclip.copy(numbers_to_type)
                     time.sleep(0.2)
                     pyautogui.hotkey('ctrl', 'v')
-                    
                     time.sleep(0.5)
                     pyautogui.press('enter')
                     print("已成功輸入數字並按下 Enter。")
 
+                    # --- 完成輸入後，執行 "恢復" 快捷鍵 ---
+                    print("輸入完成，準備執行後置快捷鍵...")
+                    press_macro_keys()
+
                 except Exception as e:
                     print(f"自動化操作時發生錯誤：{e}")
-
-                print(f"處理完畢，將在 {SHORT_INTERVAL} 秒後再次偵測...")
-                time.sleep(SHORT_INTERVAL)
-                
-                image_to_process = capture_screen_region(DIALOG_BOX_REGION)
-                if image_to_process:
-                    numbers_to_type = get_numbers_from_image(image_to_process, api_key)
-                else:
-                    numbers_to_type = None
-
-            print("未偵測到數字，恢復正常循環。")
+            else:
+                # 如果之前偵測到過，但現在沒偵測到，就重置旗標
+                if not is_first_detection:
+                    print("惡魔密碼已消失，恢復正常循環模式。")
+                    is_first_detection = True
 
     except KeyboardInterrupt:
         print("\n程式已由使用者手動中止。")
