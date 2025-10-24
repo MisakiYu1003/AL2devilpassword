@@ -85,7 +85,7 @@ class ScreenSelector:
 class ConfigApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("惡魔密碼辨識器 - 設定工具")
+        self.title("惡魔密碼辨識器 - 設定工具-版本 5.5")
         self.geometry("580x680")
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.api_key_var, self.dialog_region_var = tk.StringVar(), tk.StringVar()
@@ -295,3 +295,4 @@ class ConfigApp(tk.Tk):
 if __name__ == "__main__":
     app = ConfigApp()
     app.mainloop()
+
