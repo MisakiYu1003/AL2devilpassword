@@ -34,7 +34,7 @@ MACRO_TOGGLE_KEYS = 'alt,6'
 DOUBLE_CLICK_INTERVAL = 0.001
 
 # 5. 正常循環的間隔時間 (秒) 建議100
-LOOP_INTERVAL = 100
+LOOP_INTERVAL = 3
 
 # 6. 偵測到數字後，快速循環的間隔時間 (秒)
 SHORT_INTERVAL = 5
