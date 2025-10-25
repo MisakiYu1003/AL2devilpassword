@@ -20,9 +20,8 @@ py -m pip install Pillow
 py -m pip install python-dotenv  
 py -m pip install pyperclip  
 py -m pip install screeninfo  
-py -m pip install opencv-python  
-py -m pip install numpy  
 py -m pip install keyboard  
+py -m pip install opencv-python numpy  最後這句可能要用系統管理員才能用
   
 有用過pyton的用這個  
 pip install pyautogui  
