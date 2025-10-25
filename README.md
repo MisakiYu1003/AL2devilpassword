@@ -20,6 +20,9 @@ py -m pip install Pillow
 py -m pip install python-dotenv  
 py -m pip install pyperclip  
 py -m pip install screeninfo  
+py -m pip install opencv-python  
+py -m pip install numpy  
+py -m pip install keyboard  
   
 有用過pyton的用這個  
 pip install pyautogui  
@@ -28,3 +31,6 @@ pip install Pillow
 pip install python-dotenv  
 pip install pyperclip  
 pip install screeninfo  
+pip install opencv-python  
+pip install numpy  
+pip install keyboard 
