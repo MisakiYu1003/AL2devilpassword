@@ -12,7 +12,7 @@ gemini-2.0-flash-lite   沒看
     
     
 使用方法          
-去安裝pythone 3 WIN11.10 下載連結 https://www.python.org/ftp/python/3.13.6/python-3.13.6-amd64.exe 其它版本 https://www.python.org/downloads/  
+去安裝pythone 3 WIN11.10 下載連結 https://www.python.org/downloads/windows/ 建議下載3.12.6 其它版本 https://www.python.org/downloads/  
 開啟CMD 輸入以下句子  
 py -m pip install pyautogui  
 py -m pip install requests  
