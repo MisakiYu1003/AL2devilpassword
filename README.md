@@ -6,7 +6,7 @@ API申請網址  https://aistudio.google.com/api-keys
 會出現一組AI開頭的字母 貼在ENV  
 gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro",  "gemini-3-pro-preview", "gemini-3-flash-preview","gemma-3-27b-it","gemma-3-4b-it"    
 有哪些版本不一定會更新下面這網址可以看剩餘使用次數    
-https://aistudio.google.com/app/usage?project=gen-lang-client-0383701586&timeRange=last-28-days&tab=rate-limit     
+https://aistudio.google.com/app/usage?project=&timeRange=last-28-days&tab=rate-limit     
     
 使用方法          
 去安裝pythone 3 WIN11.10 下載連結 https://www.python.org/downloads/windows/ 建議下載3.12.6 其它版本 https://www.python.org/downloads/  
