@@ -15,7 +15,7 @@ if sys.platform == 'win32':
         try: ctypes.windll.user32.SetProcessDPIAware()
         except: pass
 SCRIPT_FILE = "devil_code_all.py"; ENV_FILE = ".env"
-MODEL_OPTIONS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]
+MODEL_OPTIONS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro",  "gemini-3-pro-preview", "gemini-3-flash-preview","gemma-3-27b-it","gemma-3-4b-it"]
 
 class ScreenSelector:
     # (ScreenSelector Class 不變)
@@ -165,4 +165,5 @@ class ConfigApp(tk.Tk):
 
 if __name__ == "__main__":
     app = ConfigApp()
+
     app.mainloop()
