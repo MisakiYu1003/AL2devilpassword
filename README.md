@@ -4,12 +4,9 @@
 GEMINI有很多版本可以自己替換    可以多開幾個GOOGLE帳號多申請幾個API  
 API申請網址  https://aistudio.google.com/api-keys  
 會出現一組AI開頭的字母 貼在ENV  
-gemini-2.5-pro          每天辨識次數100次較慢    
-gemini-2.5-flash        每天辨識次數250次  
-gemini-2.5-flash-lite   每天辨識次數1000次最快  
-gemini-2.0-flash        沒看  
-gemini-2.0-flash-lite   沒看  
-    
+gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro",  "gemini-3-pro-preview", "gemini-3-flash-preview","gemma-3-27b-it","gemma-3-4b-it"    
+有哪些版本不一定會更新下面這網址可以看剩餘使用次數    
+https://aistudio.google.com/app/usage?project=gen-lang-client-0383701586&timeRange=last-28-days&tab=rate-limit     
     
 使用方法          
 去安裝pythone 3 WIN11.10 下載連結 https://www.python.org/downloads/windows/ 建議下載3.12.6 其它版本 https://www.python.org/downloads/  
