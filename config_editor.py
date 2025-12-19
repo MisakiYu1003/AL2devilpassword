@@ -38,7 +38,7 @@ LOOP_VAR_NAME = "LOOP_INTERVAL"
 SHORT_INTERVAL_VAR_NAME = "SHORT_INTERVAL" # 新增常數
 CLICK_TYPE_VAR_NAME = "CLICK_TYPE"
 MACRO_KEY_VAR_NAME = "MACRO_TOGGLE_KEYS"
-MODEL_OPTIONS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]
+MODEL_OPTIONS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro",  "gemini-3-pro-preview", "gemini-3-flash-preview","gemma-3-27b-it","gemma-3-4b-it"]
 CLICK_OPTIONS_MAP = {
     '左鍵單擊 (Click)': 'click',
     '左鍵雙擊 (DoubleClick)': 'double',
@@ -295,4 +295,5 @@ class ConfigApp(tk.Tk):
 if __name__ == "__main__":
     app = ConfigApp()
     app.mainloop()
+
 
